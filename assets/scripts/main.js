@@ -33,6 +33,16 @@ async function init() {
  * of installing it and getting it running
  */
 function initializeServiceWorker() {
+  if (!('serviceWorker' in navigator)) {
+    console.warn('Service workers are not supported by this browser');
+    return;
+  }
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('./sw.js')
+      .then((reg) => console.log('Service Worker registered:', reg.scope))
+      .catch((err) => console.error('Service Worker registration failed:', err));
+  });
   // EXPLORE - START (All explore numbers start with B)
   /*******************/
   // ServiceWorkers have many uses, the most common of which is to manage
@@ -65,6 +75,28 @@ function initializeServiceWorker() {
  * @returns {Array<Object>} An array of recipes found in localStorage
  */
 async function getRecipes() {
+  const cached = localStorage.getItem('recipes');
+  if (cached) {
+    return JSON.parse(cached);
+  }
+  const recipes = [];
+  return new Promise(async (resolve, reject) => {
+    for (const url of RECIPE_URLS) {
+      try {
+        const res = await fetch(url);
+        const json = await res.json();
+        recipes.push(json);
+        if (recipes.length === RECIPE_URLS.length) {
+          saveRecipesToStorage(recipes);
+          resolve(recipes);
+        }
+      } catch (err) {
+        console.error('Failed to fetch', url, err);
+        reject(err);
+        break;
+      }
+    }
+  });
   // EXPOSE - START (All expose numbers start with A)
   // A1. TODO - Check local storage to see if there are any recipes.
   //            If there are recipes, return them.
